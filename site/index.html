@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Forever Goldmaker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="coin" aria-hidden="true"></span>
+      <div>
+        <h1>Forever Goldmaker</h1>
+        <p class="sub">What to craft, gather and flip on your WoW Forever auction house, using hourly Blizzard data.</p>
+      </div>
+    </div>
+    <div id="freshness" class="freshness"></div>
+  </header>
+
+  <div id="demoBanner" class="banner" hidden>
+    Showing <strong>demo prices</strong>. Live data appears once the hourly GitHub Action has run (see README).
+  </div>
+
+  <main class="layout">
+    <section class="panel inputs">
+      <h2>Your character</h2>
+
+      <label class="field">Auction house
+        <select id="house"></select>
+      </label>
+      <details class="finder">
+        <summary>Which auction house am I on?</summary>
+        <p>Pick an item, type the cheapest price you see for it in game, and we'll match it to a house.</p>
+        <div class="row">
+          <select id="finderItem"></select>
+          <input id="finderPrice" placeholder="e.g. 1g 20s" aria-label="Price you see in game">
+          <button id="finderGo" type="button" class="ghost">Match</button>
+        </div>
+        <ol id="finderOut"></ol>
+      </details>
+
+      <div class="row2">
+        <label class="field">Character level
+          <input id="charLevel" type="number" min="1" max="60" value="60">
+        </label>
+        <label class="field">Gold on hand
+          <input id="budget" type="number" min="0" step="1" value="100">
+        </label>
+      </div>
+
+      <h3>Professions <small>(tick what you have, enter skill)</small></h3>
+      <div id="profs" class="profs"></div>
+
+      <div class="actions">
+        <button id="go" type="button">Find gold</button>
+        <button id="share" type="button" class="ghost">Copy share link</button>
+      </div>
+      <p id="shareMsg" class="muted small"></p>
+    </section>
+
+    <section class="results">
+      <div class="panel plan">
+        <h2>Your plan</h2>
+        <ol id="plan"><li class="muted">Pick your auction house and professions, then press <em>Find gold</em>.</li></ol>
+      </div>
+
+      <nav class="tabs" role="tablist">
+        <button data-tab="craft" class="active">Craft &amp; sell <span id="nCraft" class="pill"></span></button>
+        <button data-tab="gather">Gather <span id="nGather" class="pill"></span></button>
+        <button data-tab="mobs">Farm mobs <span id="nMobs" class="pill"></span></button>
+        <button data-tab="flips">Flips <span id="nFlips" class="pill"></span></button>
+      </nav>
+      <div id="tab-craft" class="panel tab"></div>
+      <div id="tab-gather" class="panel tab" hidden></div>
+      <div id="tab-mobs" class="panel tab" hidden></div>
+      <div id="tab-flips" class="panel tab" hidden></div>
+    </section>
+  </main>
+
+  <footer class="foot muted small">
+    Prices: Blizzard Game Data API (WoW Forever, hourly). Recipes and farm zones: vanilla baseline, so items marked
+    <span class="warn-dot"></span> may differ in Forever. Not affiliated with Blizzard.
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="game-data.js"></script>
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
