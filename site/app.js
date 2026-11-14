@@ -19,11 +19,23 @@
     catch { base = "demo/"; idx = await getJSON(base + "houses.json"); $("demoBanner").hidden = false; }
     houses = idx.houses.filter(h => h.listings > 0);
     try { names = await getJSON(base + "item-names.json"); } catch { names = {}; }
-    const labels = window.HOUSE_GROUP_LABELS || {};
-    $("house").innerHTML = houses.map(h =>
-      `<option value="${h.id}">${esc(h.faction)} · ${esc(labels[h.group] || "Group " + h.group)} (#${h.id}, ${h.listings.toLocaleString()} listings)</option>`
-    ).join("");
+    renderHouseOptions();
     setFreshness(idx.updated);
+  }
+
+  // Friendly ruleset names per house group: shared labels from config.js, then this browser's own labels.
+  const RULESETS = ["Normal", "PvP", "RP", "RP-PvP"];
+  const LABEL_STORE = "forever-goldmaker:group-labels";
+  const localLabels = () => { try { return JSON.parse(localStorage.getItem(LABEL_STORE)) || {}; } catch { return {}; } };
+  const groupLabel = g => (window.HOUSE_GROUP_LABELS || {})[g] || localLabels()[g] || null;
+  const houseName = h => `${h.faction} · ${groupLabel(h.group) || "Unlabeled (group " + h.group + ")"}`;
+
+  function renderHouseOptions() {
+    const sel = $("house"), keep = sel.value;
+    sel.innerHTML = houses.map(h =>
+      `<option value="${h.id}">${esc(houseName(h))} (${h.listings.toLocaleString()} listings)</option>`
+    ).join("");
+    if (keep && houses.some(h => String(h.id) === keep)) sel.value = keep;
   }
 
   async function prices(houseId) {
@@ -201,11 +213,22 @@
         } catch {}
       }
       rows.sort((a, b) => a.diff - b.diff);
-      $("finderOut").innerHTML = rows.slice(0, 3).map(r =>
-        `<li><a href="#" data-house="${r.h.id}">${esc(r.h.faction)} · Group ${r.h.group} (#${r.h.id})</a>: cheapest ${fmt(r.min)}</li>`).join("")
-        || `<li>No house lists that item right now.</li>`;
+      $("finderOut").innerHTML = rows.slice(0, 3).map(r => {
+        const cur = groupLabel(r.h.group) || "";
+        const locked = (window.HOUSE_GROUP_LABELS || {})[r.h.group];
+        return `<li><a href="#" data-house="${r.h.id}">${esc(houseName(r.h))}</a>: cheapest ${fmt(r.min)}
+          ${locked ? "" : `<label class="small muted">This is
+            <select data-group="${r.h.group}"><option value="">(pick realm type)</option>${RULESETS.map(n => `<option ${n === cur ? "selected" : ""}>${n}</option>`).join("")}</select></label>`}</li>`;
+      }).join("") || `<li>No house lists that item right now.</li>`;
       $("finderOut").querySelectorAll("a").forEach(a => a.addEventListener("click", e => {
         e.preventDefault(); $("house").value = a.dataset.house; run();
+      }));
+      $("finderOut").querySelectorAll("select[data-group]").forEach(sel => sel.addEventListener("change", () => {
+        const labels = localLabels();
+        if (sel.value) labels[sel.dataset.group] = sel.value; else delete labels[sel.dataset.group];
+        try { localStorage.setItem(LABEL_STORE, JSON.stringify(labels)); } catch {}
+        renderHouseOptions();
+        $("finderOut").querySelectorAll("a").forEach(a => { a.textContent = houseName(houses.find(h => h.id == a.dataset.house)); });
       }));
     });
   }

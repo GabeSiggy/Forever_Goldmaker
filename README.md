@@ -19,7 +19,7 @@ Everything runs on GitHub for free. An hourly GitHub Action pulls Blizzard's auc
    - Optional variable (*Variables* tab): `REGION` = `us` (default) or `eu`
 4. **Pages.** Go to *Settings → Pages → Source* and choose **GitHub Actions**.
 5. **First run.** Go to *Actions → "Update AH prices and deploy site" → Run workflow*. When it finishes, your site is live at `https://<you>.github.io/<repo>/`, and it refreshes every hour after that.
-6. **Label your auction house.** Blizzard's API doesn't say which ruleset (Normal, PvP, RP) a house belongs to. Open the site, expand **"Which auction house am I on?"**, type a price you see in game, and it will match your house. Then put a friendly name in `site/config.js` (e.g. `1: "Normal"`) and set `DEFAULT_HOUSE_ID`.
+6. **Label your auction house.** Blizzard's API doesn't say which ruleset (Normal, PvP, RP) a house belongs to. Open the site, expand **"Which auction house am I on?"**, type a price you see in game, and it will match your house. Then pick your realm type (Normal, PvP, RP, RP-PvP) next to the match and the house list will show that name instead of "Group N" (saved in your browser). To label a group for everyone, add it to `site/config.js` (e.g. `1: "Normal"`), and optionally set `DEFAULT_HOUSE_ID`.
 
 Send friends the link. Each person's professions, level and gold are saved in their own browser. **Copy share link** gives a link with their setup built in.
 

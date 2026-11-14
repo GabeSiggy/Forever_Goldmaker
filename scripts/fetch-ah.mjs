@@ -112,9 +112,13 @@ async function main() {
   const houseMeta = [];
   const seenCounts = new Map();
 
+  // Group = the Nth house of each faction (by id). Live data lists ids in runs of the same faction
+  // (110-112 Alliance, 113-115 Horde, 116-118 Blackwater, ...), so ids alone can't be chunked in threes.
+  const factionRank = new Map();
   for (let i = 0; i < houses.length; i++) {
     const h = houses[i];
-    const group = Math.floor(i / 3) + 1; // houses come in Alliance/Horde/Blackwater triplets
+    const group = (factionRank.get(factionFromName(h.name)) || 0) + 1;
+    factionRank.set(factionFromName(h.name), group);
     const house = await api(`/data/wow/ruleset/${rulesetId}/auctions/${h.id}`, DYNAMIC);
     let raw = [];
     if (house) {
