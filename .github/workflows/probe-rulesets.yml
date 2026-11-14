@@ -1,0 +1,24 @@
+name: Probe rulesets (diagnostic)
+
+# Manual only. Run from the Actions tab; the report appears in the run's Summary.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Probe which houses belong to which ruleset
+        env:
+          BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+          BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+          REGION: ${{ vars.REGION || 'us' }}
+        run: node scripts/probe-rulesets.mjs
