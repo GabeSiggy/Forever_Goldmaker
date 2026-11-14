@@ -30,12 +30,34 @@
   const groupLabel = g => (window.HOUSE_GROUP_LABELS || {})[g] || localLabels()[g] || null;
   const houseName = h => `${h.faction} · ${groupLabel(h.group) || "Unlabeled (group " + h.group + ")"}`;
 
+  const FACTION_ORDER = { Alliance: 0, Horde: 1, Blackwater: 2 };
+
   function renderHouseOptions() {
     const sel = $("house"), keep = sel.value;
+    houses.sort((a, b) => a.group - b.group || (FACTION_ORDER[a.faction] ?? 9) - (FACTION_ORDER[b.faction] ?? 9) || a.id - b.id);
     sel.innerHTML = houses.map(h =>
       `<option value="${h.id}">${esc(houseName(h))} (${h.listings.toLocaleString()} listings)</option>`
     ).join("");
     if (keep && houses.some(h => String(h.id) === keep)) sel.value = keep;
+    renderRealmType();
+  }
+
+  // Lets the user name the selected house's group right under the dropdown (saved in this browser).
+  function renderRealmType() {
+    const h = houses.find(x => String(x.id) === $("house").value);
+    const field = $("realmTypeField");
+    if (!h || (window.HOUSE_GROUP_LABELS || {})[h.group]) { field.hidden = true; return; }
+    field.hidden = false;
+    const cur = groupLabel(h.group) || "";
+    $("realmType").innerHTML = `<option value="">Not sure (group ${h.group})</option>`
+      + RULESETS.map(n => `<option ${n === cur ? "selected" : ""}>${n}</option>`).join("");
+  }
+
+  function setGroupLabel(group, value) {
+    const labels = localLabels();
+    if (value) labels[group] = value; else delete labels[group];
+    try { localStorage.setItem(LABEL_STORE, JSON.stringify(labels)); } catch {}
+    renderHouseOptions();
   }
 
   async function prices(houseId) {
@@ -86,6 +108,7 @@
 
   function applyState(s) {
     if (s.house && houses.some(h => h.id === s.house)) $("house").value = s.house;
+    renderRealmType();
     $("charLevel").value = s.charLevel ?? 60;
     $("budget").value = s.gold ?? 100;
     renderProfInputs(s);
@@ -224,10 +247,7 @@
         e.preventDefault(); $("house").value = a.dataset.house; run();
       }));
       $("finderOut").querySelectorAll("select[data-group]").forEach(sel => sel.addEventListener("change", () => {
-        const labels = localLabels();
-        if (sel.value) labels[sel.dataset.group] = sel.value; else delete labels[sel.dataset.group];
-        try { localStorage.setItem(LABEL_STORE, JSON.stringify(labels)); } catch {}
-        renderHouseOptions();
+        setGroupLabel(sel.dataset.group, sel.value);
         $("finderOut").querySelectorAll("a").forEach(a => { a.textContent = houseName(houses.find(h => h.id == a.dataset.house)); });
       }));
     });
@@ -248,7 +268,11 @@
       document.querySelectorAll(".tab").forEach(t => t.hidden = t.id !== "tab-" + b.dataset.tab);
     }));
     $("go").addEventListener("click", run);
-    $("house").addEventListener("change", run);
+    $("house").addEventListener("change", () => { renderRealmType(); run(); });
+    $("realmType").addEventListener("change", () => {
+      const h = houses.find(x => String(x.id) === $("house").value);
+      if (h) setGroupLabel(h.group, $("realmType").value);
+    });
     $("share").addEventListener("click", async () => {
       const link = shareLink(readState());
       try { await navigator.clipboard.writeText(link); $("shareMsg").textContent = "Link copied. Send it to a friend, or bookmark it."; }
