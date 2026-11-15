@@ -41,7 +41,34 @@
 
     function depth(id) { const p = items[id]; return p ? p[2] : 0; }
 
-    return { buyCost, sellPrice, depth, nameOf, items, avg7 };
+    // Best value of one unit you already hold, after fees: sell on the AH, turn it in, or vendor it.
+    function unitValue(id, faction) {
+      const meta = data.items[id] || {};
+      const options = [];
+      const ah = meta.noAH ? null : sellPrice(id);
+      if (ah != null) options.push({ value: ah * (1 - AH_CUT), how: "AH" });
+      for (const c of data.conversions || []) {
+        if (!factionOk(c.faction, faction) || c.inputs.length !== 1 || c.inputs[0][0] !== Number(id)) continue;
+        let out = 0, ok = true;
+        for (const [oid, oq] of c.outputs) { const p = sellPrice(oid); if (p == null) ok = false; else out += p * oq * (1 - AH_CUT); }
+        if (ok) options.push({ value: out / c.inputs[0][1], how: `turn in ${c.inputs[0][1]} for ${c.outputs.map(o => nameOf(o[0])).join(" + ")}` });
+      }
+      if (meta.sell) options.push({ value: meta.sell, how: "vendor" });
+      if (!options.length) return null;
+      return options.sort((a, b) => b.value - a.value)[0];
+    }
+
+    return { buyCost, sellPrice, depth, nameOf, unitValue, items, avg7 };
+  }
+
+  function factionOk(required, mine) { return !required || !mine || required === mine; }
+
+  function valueParts(yields, m, faction) {
+    return yields.map(([id, avg]) => {
+      const v = m.unitValue(id, faction);
+      return { id, name: m.nameOf(id), avg, unit: v ? v.value : null, how: v ? v.how : null,
+               value: v ? v.value * avg : 0, rare: avg <= 0.05 };
+    });
   }
 
   function craftSuggestions(data, input, m) {
@@ -91,10 +118,7 @@
     for (const s of data.sources) {
       const lvl = input.professions[s.prof];
       if (lvl == null) continue;
-      const parts = s.yields.map(([id, avg]) => {
-        const p = m.sellPrice(id);
-        return { id, name: m.nameOf(id), avg, unit: p, value: p != null ? p * avg * (1 - AH_CUT) : 0 };
-      });
+      const parts = valueParts(s.yields, m, input.faction);
       const valuePerGather = parts.reduce((t, p) => t + p.value, 0);
       const primary = s.yields[0][0];
       out.push({
@@ -114,21 +138,45 @@
     return { unlocked, nextUp };
   }
 
-  function mobSuggestions(data, input, m) {
-    return (data.mobFarms || [])
-      .filter(f => input.charLevel >= f.minLevel)
+  function farmSuggestions(data, input, m) {
+    const farms = [
+      ...(data.mobFarms || []).map(f => ({ ...f, unit: f.unit || "kill" })),
+      ...(data.rawFarms || [])
+    ];
+    const out = farms
+      .filter(f => input.charLevel >= f.minLevel && factionOk(f.faction, input.faction))
       .map(f => {
-        const parts = f.yields.map(([id, avg]) => {
-          const p = m.sellPrice(id);
-          return { id, name: m.nameOf(id), avg, unit: p, value: p != null ? p * avg * (1 - AH_CUT) : 0 };
-        });
+        const parts = valueParts(f.yields, m, input.faction);
         return {
-          type: "mob", name: f.name, minLevel: f.minLevel, zones: f.zones, parts,
-          valuePerKill: parts.reduce((t, p) => t + p.value, 0),
-          links: routeLinks(f.name.replace(/\s*\(.*\)/, ""), f.zones, f.yields[0][0], "farm")
+          type: "farm", name: f.name, unit: f.unit, minLevel: f.minLevel, faction: f.faction || null,
+          zones: f.zones, note: f.note, parts,
+          valuePerUnit: parts.reduce((t, p) => t + p.value, 0),
+          jackpots: parts.filter(p => p.rare && p.unit && p.unit >= 10000).sort((a, b) => b.unit - a.unit),
+          links: routeLinks(f.name.replace(/\s*\(.*\)/, ""), f.zones, f.yields[0][0], "farm"),
+          warnings: f.verify ? ["Drop rates are estimates"] : []
         };
       })
-      .sort((a, b) => b.valuePerKill - a.valuePerKill);
+      .sort((a, b) => b.valuePerUnit - a.valuePerUnit);
+
+    // Turn-in arbitrage: buy the inputs on the AH, hand them in, sell the reward.
+    const arbitrage = [];
+    for (const c of data.conversions || []) {
+      if (!factionOk(c.faction, input.faction)) continue;
+      let cost = 0, ok = true;
+      for (const [id, q] of c.inputs) {
+        if ((data.items[id] || {}).noAH) { ok = false; break; }
+        const b = m.buyCost(id); if (!b) { ok = false; break; } cost += b.price * q;
+      }
+      if (!ok) continue;
+      let revenue = 0;
+      for (const [id, q] of c.outputs) { const p = m.sellPrice(id); if (p == null) { ok = false; break; } revenue += p * q * (1 - AH_CUT); }
+      if (!ok || revenue <= cost) continue;
+      arbitrage.push({ type: "conversion", name: c.name, npc: c.npc, cost, revenue, profit: revenue - cost,
+        inputs: c.inputs.map(([id, q]) => `${q}× ${m.nameOf(id)}`), outputs: c.outputs.map(([id, q]) => `${q}× ${m.nameOf(id)}`),
+        warnings: c.verify ? ["Turn-in not yet verified for Forever"] : [] });
+    }
+    arbitrage.sort((a, b) => b.profit - a.profit);
+    return { list: out, arbitrage };
   }
 
   function flipSuggestions(data, input, m, limit = 25) {
@@ -167,12 +215,13 @@
     const m = makeMarket(data, input.prices, input.names);
     const crafts = craftSuggestions(data, input, m);
     const gather = gatherSuggestions(data, input, m);
-    const mobs = mobSuggestions(data, input, m);
+    const farms = farmSuggestions(data, input, m);
     const flips = flipSuggestions(data, input, m);
-    return { crafts, gather, mobs, flips, plan: buildPlan(input, crafts, gather, mobs, flips) };
+    return { crafts, gather, farms, flips, plan: buildPlan(input, crafts, gather, farms, flips) };
   }
 
-  function buildPlan(input, crafts, gather, mobs, flips) {
+  function buildPlan(input, crafts, gather, farms, flips) {
+    const mobs = farms.list;
     const steps = [];
     const affordable = crafts.filter(c => c.batch > 0);
     const topGather = gather.unlocked[0];
@@ -185,8 +234,14 @@
     const unit = { herbalism: "herb node", mining: "vein", skinning: "skin", fishing: "catch" };
     if (topGather && topGather.valuePerGather > 0) {
       steps.push(`Gather ${topGather.name} in ${topGather.zones.slice(0, 2).join(" or ")} (about ${fmt(topGather.valuePerGather)} per ${unit[topGather.prof] || "gather"}).`);
-    } else if (mobs[0] && mobs[0].valuePerKill > 0) {
-      steps.push(`Farm ${mobs[0].name} in ${mobs[0].zones[0]} (about ${fmt(mobs[0].valuePerKill)} per kill).`);
+    }
+    const topFarm = mobs.find(f => f.valuePerUnit > 0);
+    if (topFarm && (!topGather || topFarm.valuePerUnit * 3 > topGather.valuePerGather)) {
+      steps.push(`Raw farm: ${topFarm.name} in ${topFarm.zones[0]} (about ${fmt(topFarm.valuePerUnit)} per ${topFarm.unit}${topFarm.jackpots[0] ? `, with a ${Math.round(topFarm.jackpots[0].avg * 100)}% shot at ${topFarm.jackpots[0].name} worth ${fmt(topFarm.jackpots[0].unit)}` : ""}).`);
+    }
+    if (farms.arbitrage[0]) {
+      const a = farms.arbitrage[0];
+      steps.push(`Turn-in arbitrage: buy ${a.inputs.join(" + ")} for ${fmt(a.cost)}, hand in at ${a.npc}, sell ${a.outputs.join(" + ")} for ${fmt(a.revenue)}.`);
     }
     if (flips[0]) steps.push(`Flip check: ${flips[0].name} is listed at ${fmt(flips[0].buyAt)} vs a 7-day average of ${fmt(flips[0].avg7)}.`);
     if (gather.nextUp[0]) steps.push(`Level ${gather.nextUp[0].prof[0].toUpperCase() + gather.nextUp[0].prof.slice(1)} ${gather.nextUp[0].skillGap} more points to unlock ${gather.nextUp[0].name} (${fmt(gather.nextUp[0].valuePerGather)} per gather).`);

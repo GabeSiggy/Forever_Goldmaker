@@ -17,13 +17,13 @@ const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
 const base = {};
 const tierOf = {};
 for (const s of D.sources) for (const [id] of s.yields) tierOf[id] = Math.min(tierOf[id] ?? 999, s.skill);
-for (const f of D.mobFarms) for (const [id] of f.yields) tierOf[id] ??= f.minLevel * 5;
+for (const f of [...D.mobFarms, ...(D.rawFarms || [])]) for (const [id] of f.yields) tierOf[id] ??= f.minLevel * 5;
 for (const id of Object.keys(D.items)) {
-  if (D.items[id].vendor != null) continue;
+  if (D.items[id].vendor != null || D.items[id].noAH) continue;
   const t = tierOf[id];
   if (t != null) base[id] = Math.round(300 + Math.pow(t + 10, 1.6) * 2);
 }
-Object.assign(base, { 13468: 400000, 12363: 150000, 12800: 90000, 12364: 60000, 14256: 30000, 7078: 60000, 8150: 2000 });
+Object.assign(base, { 13468: 400000, 12363: 150000, 12800: 90000, 12364: 60000, 14256: 30000, 7078: 60000, 8150: 2000, 6367: 70000, 13546: 9000, 13926: 120000, 7971: 25000, 5500: 6000 });
 // Crafted items: priced off their reagents, some profitable, some not.
 const cost = id => base[id] ?? D.items[id]?.vendor ?? 1000;
 for (let pass = 0; pass < 3; pass++) {

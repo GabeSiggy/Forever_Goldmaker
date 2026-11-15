@@ -100,6 +100,7 @@
     });
     return {
       house: +$("house").value,
+      faction: $("faction").value,
       charLevel: clamp(+$("charLevel").value || 60, 1, 60),
       gold: Math.max(0, +$("budget").value || 0),
       professions
@@ -109,6 +110,7 @@
   function applyState(s) {
     if (s.house && houses.some(h => h.id === s.house)) $("house").value = s.house;
     renderRealmType();
+    $("faction").value = s.faction || "";
     $("charLevel").value = s.charLevel ?? 60;
     $("budget").value = s.gold ?? 100;
     renderProfInputs(s);
@@ -121,12 +123,12 @@
     (q.get("p") || "").split(",").filter(Boolean).forEach(pair => {
       const [k, v] = pair.split(":"); if (D.professions[k]) professions[k] = +v || 1;
     });
-    return { house: +q.get("h") || null, charLevel: +q.get("lvl") || 60, gold: +q.get("g") || 0, professions };
+    return { house: +q.get("h") || null, faction: q.get("f") || "", charLevel: +q.get("lvl") || 60, gold: +q.get("g") || 0, professions };
   }
 
   function shareLink(s) {
     const p = Object.entries(s.professions).map(([k, v]) => `${k}:${v}`).join(",");
-    return `${location.origin}${location.pathname}#h=${s.house}&lvl=${s.charLevel}&g=${s.gold}&p=${p}`;
+    return `${location.origin}${location.pathname}#h=${s.house}&f=${s.faction}&lvl=${s.charLevel}&g=${s.gold}&p=${p}`;
   }
 
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -136,18 +138,20 @@
     const s = readState();
     try { localStorage.setItem(STORE, JSON.stringify(s)); } catch {}
     const p = await prices(s.house);
+    const house = houses.find(h => h.id === s.house);
+    const faction = s.faction || (house && house.faction !== "Blackwater" ? house.faction : null);
     const res = E.recommend(D, {
-      professions: s.professions, charLevel: s.charLevel, budget: s.gold * 10000, prices: p, names
+      professions: s.professions, charLevel: s.charLevel, faction, budget: s.gold * 10000, prices: p, names
     });
     lastResult = res;
     $("plan").innerHTML = res.plan.map(x => `<li>${esc(x)}</li>`).join("");
     renderCraft(res.crafts, s);
     renderGather(res.gather, s);
-    renderMobs(res.mobs);
+    renderFarms(res.farms, faction);
     renderFlips(res.flips);
     $("nCraft").textContent = res.crafts.length;
     $("nGather").textContent = res.gather.unlocked.length;
-    $("nMobs").textContent = res.mobs.length;
+    $("nFarms").textContent = res.farms.list.length + res.farms.arbitrage.length;
     $("nFlips").textContent = res.flips.length;
   }
 
@@ -178,7 +182,7 @@
   function renderGather(g, s) {
     const el = $("tab-gather");
     const gathering = Object.keys(s.professions).filter(k => D.professions[k].kind === "gathering");
-    if (!gathering.length) { el.innerHTML = `<p class="empty">Tick Herbalism, Mining, Skinning or Fishing to see what's worth farming. No gathering profession? Check <em>Farm mobs</em>.</p>`; return; }
+    if (!gathering.length) { el.innerHTML = `<p class="empty">Tick Herbalism, Mining, Skinning or Fishing to see what's worth farming. No gathering profession? Check <em>Raw farming</em>.</p>`; return; }
     const row = x => `<tr>
       <td><span class="name">${esc(x.name)}</span><span class="meta">${esc(D.professions[x.prof].name)} ${x.skill}${x.unlocked ? "" : ` · need ${x.skillGap} more skill`}</span>
         <span class="meta">${x.parts.map(p => `${p.avg}× ${esc(p.name)} @ ${p.unit == null ? "no data" : fmt(p.unit)}`).join(" · ")}</span>${warnTags(x.warnings)}</td>
@@ -191,13 +195,27 @@
       + `<p class="muted small">Value per gather = average yield × market price, after the AH cut. Yields are estimates; Forever adds rare "scarce" materials on top. Wowhead's item page shows where it's gathered; GatherMate2 records nodes as you go.</p>`;
   }
 
-  function renderMobs(list) {
-    const el = $("tab-mobs");
-    if (!list.length) { el.innerHTML = `<p class="empty">No mob farms for your level yet.</p>`; return; }
-    el.innerHTML = table(`<th>Farm</th><th>Where</th><th class="num">Value per kill</th><th>Maps &amp; routes</th>`,
-      list.map(x => `<tr><td><span class="name">${esc(x.name)}</span><span class="meta">Level ${x.minLevel}+ · ${x.parts.map(p => `${esc(p.name)} @ ${p.unit == null ? "no data" : fmt(p.unit)}`).join(" · ")}</span></td>
-        <td>${esc(x.zones.join(", "))}</td><td class="num good">${fmt(x.valuePerKill)}</td><td>${links(x.links)}</td></tr>`).join(""))
-      + `<p class="muted small">No profession needed. Drop rates are rough averages.</p>`;
+  function renderFarms(f, faction) {
+    const el = $("tab-farms");
+    const part = p => `${esc(p.name)} ${p.rare ? `(${+(p.avg * 100).toFixed(1)}% chance)` : `×${p.avg}`} @ ${p.unit == null ? "no data" : fmt(p.unit)}${p.how && p.how !== "AH" ? ` <em>(${esc(p.how)})</em>` : ""}`;
+    let html = "";
+    if (f.list.length) {
+      html += table(`<th>Farm</th><th>Where</th><th class="num">Value per</th><th>Maps &amp; routes</th>`,
+        f.list.map(x => `<tr><td><span class="name">${esc(x.name)}</span>
+            <span class="meta">Level ${x.minLevel}+${x.faction ? ` · ${esc(x.faction)} only` : ""} · ${x.parts.map(part).join(" · ")}</span>
+            ${x.jackpots.map(j => `<span class="tag own">Jackpot: ${esc(j.name)} ${fmt(j.unit)}</span>`).join("")}
+            ${x.note ? `<span class="meta">${esc(x.note)}</span>` : ""}${warnTags(x.warnings)}</td>
+          <td>${esc(x.zones.join(", "))}</td>
+          <td class="num ${x.valuePerUnit ? "good" : "muted"}">${x.valuePerUnit ? fmt(x.valuePerUnit) : "no data"}<span class="meta">per ${esc(x.unit)}</span></td>
+          <td>${links(x.links)}</td></tr>`).join(""));
+    } else html += `<p class="empty">No raw farms for your level yet.</p>`;
+    if (f.arbitrage.length) {
+      html += `<h3 class="subhead">Turn-in arbitrage</h3>` + table(`<th>Turn-in</th><th class="num">Buy inputs</th><th class="num">Sell reward</th><th class="num">Profit</th>`,
+        f.arbitrage.map(a => `<tr><td><span class="name">${esc(a.name)}</span><span class="meta">${esc(a.inputs.join(" + "))} → ${esc(a.outputs.join(" + "))} · ${esc(a.npc)}</span>${warnTags(a.warnings)}</td>
+          <td class="num">${fmt(a.cost)}</td><td class="num">${fmt(a.revenue)}</td><td class="num good">${fmt(a.profit)}</td></tr>`).join(""));
+    }
+    html += `<p class="muted small">No profession needed. Each item is valued at its best outlet after fees: the AH, an NPC turn-in, or a vendor. Rare drops are counted at their odds, so a 1% chance at a 7g item adds 7s per attempt.${faction ? ` Showing ${esc(faction)} farms.` : " Pick your faction to hide farms you can't do."}</p>`;
+    el.innerHTML = html;
   }
 
   function renderFlips(list) {

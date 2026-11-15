@@ -4,7 +4,7 @@ A free website for you and your friends that reads every **WoW Forever** auction
 
 - **Craft & sell:** which recipes they can make at their skill level are profitable after the 5% AH cut, and how many to make with the gold they have.
 - **Gather:** which herb, ore, skin or fish is worth the most per node at their skill, with the best zones, a Wowhead map link and route videos. It also shows nodes just above their skill that are worth leveling toward.
-- **Farm mobs:** cloth and elemental farms for their character level (no profession needed).
+- **Raw farming:** no profession needed. Covers cloth and elemental mob farms, lootable objects such as Desolace Shellfish Traps (Big Iron Fishing Pole) and Big-mouth Clams (pearls), NPC turn-ins (5 Shellfish → Bloodbelly Fish), and turn-ins where buying the inputs on the AH beats selling the reward. Each item is valued at its best outlet (AH, turn-in or vendor), and rare drops count at their odds.
 - **Flips:** items listed 30%+ under their 7-day average that they can afford.
 
 Everything runs on GitHub for free. An hourly GitHub Action pulls Blizzard's auction data and publishes the site to GitHub Pages. There's no server to maintain.
@@ -60,6 +60,18 @@ To add a recipe, add one line under `recipes` (use Wowhead for IDs):
 ```js
 { prof: "alchemy", skill: 250, makes: [ITEM_ID, 1], reagents: [[HERB_ID, 2], [8925, 1]] },
 ```
+
+To add a raw farm or turn-in, add one entry like this:
+
+```js
+// rawFarms: valued per `unit`; rare drops count at their odds
+{ name: "Shellfish Traps", unit: "trap", minLevel: 33, faction: "Horde",
+  yields: [[13545, 0.8], [6367, 0.01]], zones: ["Desolace"] },
+// conversions: values the input through the reward, and flags AH arbitrage
+{ name: "Fish in a Bucket", npc: "Jinar'Zillen", faction: "Horde", inputs: [[13545, 5]], outputs: [[13546, 1]] },
+```
+
+Mark quest items that can't be listed with `noAH: true` in `items`, and give vendor sell prices with `sell` (in copper).
 
 Yields per node are estimates. Tune them after a few farming sessions.
 

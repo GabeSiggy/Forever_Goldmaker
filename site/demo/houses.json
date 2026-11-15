@@ -8,16 +8,16 @@
    "name": "Alliance Auction House",
    "faction": "Alliance",
    "group": 1,
-   "listings": 1443,
-   "items": 187
+   "listings": 1485,
+   "items": 193
   },
   {
    "id": 111,
    "name": "Horde Auction House",
    "faction": "Horde",
    "group": 1,
-   "listings": 1450,
-   "items": 189
+   "listings": 1490,
+   "items": 194
   },
   {
    "id": 112,
@@ -32,16 +32,16 @@
    "name": "Alliance Auction House",
    "faction": "Alliance",
    "group": 2,
-   "listings": 1362,
-   "items": 184
+   "listings": 1379,
+   "items": 190
   },
   {
    "id": 114,
    "name": "Horde Auction House",
    "faction": "Horde",
    "group": 2,
-   "listings": 1394,
-   "items": 188
+   "listings": 1457,
+   "items": 194
   },
   {
    "id": 115,
@@ -56,16 +56,16 @@
    "name": "Alliance Auction House",
    "faction": "Alliance",
    "group": 3,
-   "listings": 1426,
-   "items": 192
+   "listings": 1481,
+   "items": 198
   },
   {
    "id": 117,
    "name": "Horde Auction House",
    "faction": "Horde",
    "group": 3,
-   "listings": 1443,
-   "items": 195
+   "listings": 1450,
+   "items": 198
   },
   {
    "id": 118,
@@ -80,48 +80,48 @@
    "name": "Alliance Auction House",
    "faction": "Alliance",
    "group": 4,
-   "listings": 1386,
-   "items": 191
+   "listings": 1415,
+   "items": 197
   },
   {
    "id": 120,
    "name": "Horde Auction House",
    "faction": "Horde",
    "group": 4,
-   "listings": 1376,
-   "items": 183
+   "listings": 1451,
+   "items": 190
   },
   {
    "id": 121,
    "name": "Blackwater Auction House",
    "faction": "Blackwater",
    "group": 4,
-   "listings": 1345,
-   "items": 176
+   "listings": 1329,
+   "items": 177
   },
   {
    "id": 123,
    "name": "Alliance Auction House",
    "faction": "Alliance",
    "group": 5,
-   "listings": 1390,
-   "items": 186
+   "listings": 1452,
+   "items": 194
   },
   {
    "id": 124,
    "name": "Horde Auction House",
    "faction": "Horde",
    "group": 5,
-   "listings": 1385,
-   "items": 189
+   "listings": 1423,
+   "items": 197
   },
   {
    "id": 125,
    "name": "Blackwater Auction House",
    "faction": "Blackwater",
    "group": 5,
-   "listings": 1371,
-   "items": 191
+   "listings": 1493,
+   "items": 196
   }
  ]
 }

@@ -121,7 +121,11 @@ window.GAME_DATA = {
     6451: { name: "Heavy Silk Bandage" }, 8545: { name: "Heavy Mageweave Bandage" },
     14529: { name: "Runecloth Bandage" }, 14530: { name: "Heavy Runecloth Bandage" },
     13931: { name: "Nightfin Soup" }, 13928: { name: "Grilled Squid" }, 18254: { name: "Runn Tum Tuber Surprise" },
-    21072: { name: "Smoked Sagefish" }
+    21072: { name: "Smoked Sagefish" },
+    // Raw-farm loot. `sell` = vendor sell price (copper); `noAH: true` = can't be listed (quest items).
+    6367: { name: "Big Iron Fishing Pole", sell: 2133 }, 13545: { name: "Shellfish", noAH: true },
+    13546: { name: "Bloodbelly Fish" }, 7973: { name: "Big-mouth Clam" }, 7974: { name: "Zesty Clam Meat" },
+    5500: { name: "Iridescent Pearl" }, 7971: { name: "Black Pearl" }, 13926: { name: "Golden Pearl" }
   },
 
   /*
@@ -203,6 +207,32 @@ window.GAME_DATA = {
     { name: "Elemental Water (water elementals)", minLevel: 40, yields: [[7070, 0.3], [7080, 0.01]], zones: ["Dustwallow Marsh", "Azshara", "Felwood"] },
     { name: "Elemental Air (air elementals)", minLevel: 35, yields: [[7069, 0.3]], zones: ["Arathi Highlands", "Azshara", "Silithus"] },
     { name: "Essence of Undeath / Living Essence", minLevel: 55, yields: [[12808, 0.1], [12803, 0.05]], zones: ["Eastern Plaguelands", "Western Plaguelands", "Un'Goro Crater"] }
+  ],
+
+  /*
+   * Raw farms anyone can do: lootable objects, containers and rare drops. Each entry is valued per
+   * `unit` (trap, clam, kill). Loot that's better turned in than sold is valued through `conversions`.
+   * `faction` limits a farm to one side. Rates are community estimates: tune them as you farm.
+   */
+  rawFarms: [
+    { name: "Shellfish Traps", unit: "trap", minLevel: 33, faction: "Horde",
+      yields: [[13545, 0.8], [6367, 0.01]], zones: ["Desolace (underwater, west of Shadowprey Village)"],
+      note: "Shellfish and the Big Iron Fishing Pole only drop while you're on Fish in a Bucket. Traps can spawn a lvl 33-36 crawler.",
+      verify: true },
+    { name: "Big-mouth Clams", unit: "clam", minLevel: 35,
+      yields: [[7974, 1], [5500, 0.05], [7971, 0.05], [13926, 0.02]],
+      zones: ["Dustwallow Marsh (Muckshell Makrura)", "Desolace coast", "Tanaris coast", "Feralas coast"],
+      note: "Clams drop from coastal makrura and murlocs. Opening needs no profession.", verify: true }
+  ],
+
+  /*
+   * Conversions: hand items to an NPC (or vendor) for something else. Used two ways:
+   * 1) to value farmed loot (5 Shellfish are worth one Bloodbelly Fish), and
+   * 2) as arbitrage when the inputs are cheaper on the AH than the output sells for.
+   */
+  conversions: [
+    { name: "Fish in a Bucket (repeatable)", npc: "Jinar'Zillen, Shadowprey Village (Desolace)", faction: "Horde",
+      inputs: [[13545, 5]], outputs: [[13546, 1]], verify: true }
   ],
 
   /*
