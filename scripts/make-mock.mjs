@@ -34,6 +34,13 @@ for (let pass = 0; pass < 3; pass++) {
     base[id] = Math.round(c * (0.7 + ((id * 9301) % 100) / 100));
   }
 }
+// Disenchanting mats.
+Object.assign(base, { 10940: 400, 11083: 1200, 11137: 2500, 11176: 4500, 16204: 9000, 10938: 1500, 10939: 4200,
+  10998: 2000, 11082: 6500, 11134: 4000, 11135: 12500, 11174: 7000, 11175: 22000, 16202: 12000, 16203: 38000,
+  10978: 3000, 11084: 9000, 11138: 12000, 11139: 20000, 11177: 25000, 11178: 40000, 14343: 30000, 14344: 70000, 20725: 250000 });
+// Gear (non-commodity auctions) for disenchant tests: [id, quality, ilvl, class, price]
+const GEAR = [];
+for (let i = 0; i < 30; i++) GEAR.push([30000 + i, i % 5 === 0 ? 3 : 2, 15 + (i * 7) % 46, i % 3 === 0 ? 2 : 4, 1500 + ((i * 7919) % 60000)]);
 // A few non-dataset items so flips have something to find.
 for (let i = 0; i < 20; i++) base[20000 + i] = 5000 + i * 3000;
 
@@ -59,6 +66,11 @@ for (const [i, hid] of houses.entries()) {
       commodities.push({ id: aid++, item: { id: Number(id) }, quantity: 1 + Math.floor(rand() * 20), unit_price: unit, time_left: "LONG" });
     }
   }
+  for (const [gid, , , , gp] of GEAR) {
+    if (rand() < 0.2) continue;
+    for (let k = 0; k < 1 + Math.floor(rand() * 3); k++)
+      gear.push({ id: aid++, item: { id: gid, bonus_lists: [] }, buyout: Math.round(gp * houseMult * (0.8 + rand() * 0.6)), quantity: 1, time_left: "LONG" });
+  }
   gear.push({ id: aid++, item: { id: 20019, context: 0, bonus_lists: [], modifiers: [] }, buyout: 90000, quantity: 1, time_left: "LONG" });
   gear.push({ id: aid++, item: { id: 20019 }, bid: 50000, quantity: 1, time_left: "SHORT" }); // bid-only
   await w(`data_wow_ruleset_1_auctions_${hid}`, {
@@ -69,4 +81,8 @@ for (const [i, hid] of houses.entries()) {
   await w(`data_wow_ruleset_1_auctions_${hid}_commodities`, { auctions: commodities });
 }
 for (let i = 0; i < 20; i += 2) await w(`data_wow_item_${20000 + i}`, { id: 20000 + i, name: `Mock Trade Good ${i}` });
+const QN = ["POOR", "COMMON", "UNCOMMON", "RARE", "EPIC"];
+for (const [gid, q, ilvl, cls] of GEAR)
+  await w(`data_wow_item_${gid}`, { id: gid, name: `Mock ${q === 3 ? "Blue" : "Green"} ${cls === 2 ? "Sword" : "Bracers"} ${ilvl}`,
+    quality: { type: QN[q] }, level: ilvl, item_class: { id: cls }, is_equippable: true });
 console.log(`mock API written to ${outDir} (${Object.keys(base).length} priced items)`);

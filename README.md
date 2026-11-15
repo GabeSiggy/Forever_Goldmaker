@@ -5,6 +5,7 @@ A free website for you and your friends that reads every **WoW Forever** auction
 - **Craft & sell:** which recipes they can make at their skill level are profitable after the 5% AH cut, and how many to make with the gold they have.
 - **Gather:** which herb, ore, skin or fish is worth the most per node at their skill, with the best zones, a Wowhead map link and route videos. It also shows nodes just above their skill that are worth leveling toward.
 - **Raw farming:** no profession needed. Covers cloth and elemental mob farms, lootable objects such as Desolace Shellfish Traps (Big Iron Fishing Pole) and Big-mouth Clams (pearls), NPC turn-ins (5 Shellfish → Bloodbelly Fish), and turn-ins where buying the inputs on the AH beats selling the reward. Each item is valued at its best outlet (AH, turn-in or vendor), and rare drops count at their odds.
+- **Disenchant:** greens, blues and purples on the AH that are worth more as disenchant mats than they cost, plus crafts that pay more disenchanted than sold. Item quality, item level and type come from Blizzard's item data, cached in `site/data/item-info.json`, which fills in over the first few hourly runs. Essence combine/split gaps (3 lesser ↔ 1 greater) appear as conversions.
 - **Flips:** items listed 30%+ under their 7-day average that they can afford.
 
 Everything runs on GitHub for free. An hourly GitHub Action pulls Blizzard's auction data and publishes the site to GitHub Pages. There's no server to maintain.

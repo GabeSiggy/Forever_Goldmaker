@@ -21,7 +21,8 @@ const REGION = (process.env.REGION || "us").toLowerCase();
 const OUT_DIR = process.env.OUT_DIR || "site/data";
 const SITE_URL = (process.env.SITE_URL || "").replace(/\/$/, "");
 const MOCK_DIR = process.env.MOCK_DIR;
-const MAX_NAME_LOOKUPS = Number(process.env.MAX_NAME_LOOKUPS || 250);
+const MAX_ITEM_LOOKUPS = Number(process.env.MAX_ITEM_LOOKUPS || process.env.MAX_NAME_LOOKUPS || 800);
+const QUALITY = { POOR: 0, COMMON: 1, UNCOMMON: 2, RARE: 3, EPIC: 4, LEGENDARY: 5 };
 const API = `https://${REGION}.api.blizzard.com`;
 const DYNAMIC = `dynamic-forever-${REGION}`;
 const STATIC = `static-forever-${REGION}`;
@@ -109,8 +110,11 @@ async function main() {
 
   await fs.mkdir(OUT_DIR, { recursive: true });
   const names = (await readPrevious("item-names.json")) || {};
+  // id -> [name, quality 0-5, item level, item class id (2 weapon, 4 armor), equippable 0/1], or null if unknown to the API
+  const info = (await readPrevious("item-info.json")) || {};
   const houseMeta = [];
   const seenCounts = new Map();
+  const gearIds = new Set(); // non-commodity listings are gear: look these up first (disenchanting needs them)
 
   // Group = the Nth house of each faction (by id). Live data lists ids in runs of the same faction
   // (110-112 Alliance, 113-115 Horde, 116-118 Blackwater, ...), so ids alone can't be chunked in threes.
@@ -122,7 +126,9 @@ async function main() {
     const house = await api(`/data/wow/ruleset/${rulesetId}/auctions/${h.id}`, DYNAMIC);
     let raw = [];
     if (house) {
-      raw = raw.concat(await resolveList(house.auctions, DYNAMIC));
+      const gear = await resolveList(house.auctions, DYNAMIC);
+      for (const a of gear) if (a.item?.id) gearIds.add(String(a.item.id));
+      raw = raw.concat(gear);
       let commodities = await resolveList(house.commodities, DYNAMIC);
       if (!commodities.length) {
         const c = await api(`/data/wow/ruleset/${rulesetId}/auctions/${h.id}/commodities`, DYNAMIC);
@@ -147,15 +153,23 @@ async function main() {
     console.log(`house ${h.id} (${h.name}, group ${group}): ${raw.length} listings, ${Object.keys(items).length} items`);
   }
 
-  // 3. Look up names for the most-listed unknown items (the Forever item API only covers some items).
-  const unknown = [...seenCounts.entries()].filter(([id]) => !(id in names)).sort((a, b) => b[1] - a[1]);
-  for (const [id] of unknown.slice(0, MAX_NAME_LOOKUPS)) {
+  // 3. Look up item details (name, quality, item level, type) for items we haven't seen before.
+  //    Gear first, then the most-listed items. The Forever item API doesn't cover every item yet.
+  const unknown = [...seenCounts.entries()].filter(([id]) => !(id in info))
+    .sort((a, b) => (gearIds.has(b[0]) - gearIds.has(a[0])) || (b[1] - a[1]));
+  let looked = 0;
+  for (const [id] of unknown.slice(0, MAX_ITEM_LOOKUPS)) {
     try {
       const item = await api(`/data/wow/item/${id}`, STATIC);
-      names[id] = item?.name ?? null;
+      info[id] = item ? [item.name ?? null, QUALITY[item.quality?.type] ?? null, item.level ?? null,
+                         item.item_class?.id ?? null, item.is_equippable ? 1 : 0] : null;
+      if (item?.name) names[id] = item.name; else if (!(id in names)) names[id] = null;
+      looked++;
     } catch { /* leave for next run */ }
   }
+  console.log(`item lookups: ${looked} (${unknown.length - looked} still unknown)`);
 
+  await fs.writeFile(path.join(OUT_DIR, "item-info.json"), JSON.stringify(info));
   await fs.writeFile(path.join(OUT_DIR, "item-names.json"), JSON.stringify(names));
   await fs.writeFile(path.join(OUT_DIR, "houses.json"),
     JSON.stringify({ region: REGION, rulesetId: Number(rulesetId), updated: now.toISOString(), houses: houseMeta }, null, 1));

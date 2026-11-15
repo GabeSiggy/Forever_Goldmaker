@@ -15,7 +15,7 @@
   const FLIP_DISCOUNT = 0.70;   // flip when cheapest listing <= 70% of 7-day average
   const FLIP_MIN_DAYS = 3;      // need this many days of history before trusting the average
 
-  function makeMarket(data, prices, names) {
+  function makeMarket(data, prices, names, itemInfo) {
     const items = prices.items || {};
     const avg7 = prices.avg7 || {};
     const nameOf = id => (data.items[id] && data.items[id].name) || (names && names[id]) || `Item #${id}`;
@@ -58,7 +58,39 @@
       return options.sort((a, b) => b.value - a.value)[0];
     }
 
-    return { buyCost, sellPrice, depth, nameOf, unitValue, items, avg7 };
+    // Quality / item level / type: from game-data.js (q, ilvl, cls) if set, else from the API cache.
+    function infoOf(id) {
+      const meta = data.items[id];
+      if (meta && meta.q != null) return { q: meta.q, ilvl: meta.ilvl, cls: meta.cls, equip: 1 };
+      const a = itemInfo && itemInfo[id];
+      return a ? { q: a[1], ilvl: a[2], cls: a[3], equip: a[4] } : null;
+    }
+
+    // Expected value of disenchanting one item, after the AH cut on the mats. null = can't be disenchanted / unknown.
+    function deValue(id, faction) {
+      const de = data.disenchant, inf = infoOf(id);
+      if (!de || !inf || !inf.equip || inf.q < 2 || inf.q > 4 || inf.ilvl == null || (inf.cls !== 2 && inf.cls !== 4)) return null;
+      const b = de.brackets.find(x => inf.ilvl <= x.maxIlvl);
+      if (!b) return null;
+      let outcomes;
+      if (inf.q === 2) {
+        const o = de.odds[inf.cls === 2 ? "weapon" : "armor"];
+        outcomes = [[b.dust[0], (o.dust + (b.shard ? 0 : o.shard)) * b.dust[1]], [b.essence[0], o.essence * b.essence[1]]];
+        if (b.shard) outcomes.push([b.shard, o.shard]);
+      } else if (inf.q === 3) outcomes = b.rare;
+      else outcomes = b.epic;
+      if (!outcomes) return null;
+      let value = 0, priced = 0;
+      const parts = outcomes.map(([mid, avg]) => {
+        const v = unitValue(mid, faction);
+        if (v) { value += v.value * avg; priced++; }
+        return { id: mid, name: nameOf(mid), avg, unit: v ? v.value : null };
+      });
+      if (!priced) return null;
+      return { value, skill: b.skill, ilvl: inf.ilvl, quality: inf.q, parts };
+    }
+
+    return { buyCost, sellPrice, depth, nameOf, unitValue, infoOf, deValue, items, avg7 };
   }
 
   function factionOk(required, mine) { return !required || !mine || required === mine; }
@@ -84,8 +116,15 @@
         if (!c) missing.push(m.nameOf(id)); else cost += c.price * qty;
         return { id, name: m.nameOf(id), qty, unit: c ? c.price : null, source: c ? c.source : null };
       });
-      if (unitSell == null || missing.length) continue; // can't price it right now
-      const revenue = unitSell * makesQty * (1 - AH_CUT);
+      if (missing.length) continue; // can't price the mats right now
+      const de = m.deValue(productId, input.faction);
+      const enchSkill = input.professions.enchanting;
+      const canDE = de && enchSkill != null && enchSkill >= de.skill;
+      const sellRevenue = unitSell != null ? unitSell * makesQty * (1 - AH_CUT) : null;
+      const deRevenue = de ? de.value * makesQty : null;
+      let outlet = "sell", revenue = sellRevenue;
+      if (canDE && (revenue == null || deRevenue > revenue)) { outlet = "disenchant"; revenue = deRevenue; }
+      if (revenue == null) continue;
       const profit = revenue - cost;
       const margin = cost > 0 ? profit / cost : 1;
       if (profit <= 0 || margin < MIN_MARGIN) continue;
@@ -105,7 +144,9 @@
         cost, revenue, profit, margin, listed, batch, marketCap,
         batchProfit: profit * batch,
         needGold: batch === 0 ? cost : 0,
-        reagents, gatherable,
+        reagents, gatherable, outlet, de, sellRevenue, deRevenue,
+        deHint: de && !canDE && deRevenue > (sellRevenue || 0) && deRevenue > cost
+          ? `Worth ${fmt(deRevenue)} disenchanted (needs Enchanting ${de.skill})` : null,
         warnings: [r.cooldown, r.requires, r.note, r.verify ? "Recipe not yet verified for Forever" : null].filter(Boolean)
       });
     }
@@ -179,6 +220,26 @@
     return { list: out, arbitrage };
   }
 
+  function disenchantSuggestions(data, input, m, limit = 30) {
+    const ench = input.professions.enchanting;
+    const out = [];
+    for (const [id, p] of Object.entries(m.items)) {
+      const de = m.deValue(id, input.faction);
+      if (!de) continue;
+      const buy = p[0];
+      const profit = de.value - buy;
+      if (profit <= 0 || profit < buy * 0.10) continue;
+      out.push({
+        type: "disenchant", itemId: Number(id), name: m.nameOf(id), buyAt: buy, listed: p[2],
+        deValue: de.value, profit, margin: buy ? profit / buy : 1, skill: de.skill, ilvl: de.ilvl,
+        quality: de.quality, parts: de.parts,
+        canDE: ench != null && ench >= de.skill, affordable: buy <= input.budget
+      });
+    }
+    out.sort((a, b) => (b.canDE - a.canDE) || (b.affordable - a.affordable) || (b.profit - a.profit));
+    return out.slice(0, limit);
+  }
+
   function flipSuggestions(data, input, m, limit = 25) {
     const out = [];
     for (const [id, p] of Object.entries(m.items)) {
@@ -212,15 +273,16 @@
 
   /** Top-level: everything the UI shows, plus a one-paragraph plan. */
   function recommend(data, input) {
-    const m = makeMarket(data, input.prices, input.names);
+    const m = makeMarket(data, input.prices, input.names, input.itemInfo);
     const crafts = craftSuggestions(data, input, m);
     const gather = gatherSuggestions(data, input, m);
     const farms = farmSuggestions(data, input, m);
     const flips = flipSuggestions(data, input, m);
-    return { crafts, gather, farms, flips, plan: buildPlan(input, crafts, gather, farms, flips) };
+    const disenchant = disenchantSuggestions(data, input, m);
+    return { crafts, gather, farms, flips, disenchant, plan: buildPlan(input, crafts, gather, farms, flips, disenchant) };
   }
 
-  function buildPlan(input, crafts, gather, farms, flips) {
+  function buildPlan(input, crafts, gather, farms, flips, disenchant = []) {
     const mobs = farms.list;
     const steps = [];
     const affordable = crafts.filter(c => c.batch > 0);
@@ -241,8 +303,11 @@
     }
     if (farms.arbitrage[0]) {
       const a = farms.arbitrage[0];
-      steps.push(`Turn-in arbitrage: buy ${a.inputs.join(" + ")} for ${fmt(a.cost)}, hand in at ${a.npc}, sell ${a.outputs.join(" + ")} for ${fmt(a.revenue)}.`);
+      const where = /bags/.test(a.npc || "") ? "convert them in your bags" : `hand them in at ${a.npc}`;
+      steps.push(`Conversion: buy ${a.inputs.join(" + ")} for ${fmt(a.cost)}, ${where}, and sell ${a.outputs.join(" + ")} for ${fmt(a.revenue)}.`);
     }
+    const de = disenchant.find(d => d.canDE && d.affordable);
+    if (de) steps.push(`Disenchant: buy ${de.name} at ${fmt(de.buyAt)} and disenchant it for about ${fmt(de.deValue)} in mats (${fmt(de.profit)} profit each).`);
     if (flips[0]) steps.push(`Flip check: ${flips[0].name} is listed at ${fmt(flips[0].buyAt)} vs a 7-day average of ${fmt(flips[0].avg7)}.`);
     if (gather.nextUp[0]) steps.push(`Level ${gather.nextUp[0].prof[0].toUpperCase() + gather.nextUp[0].prof.slice(1)} ${gather.nextUp[0].skillGap} more points to unlock ${gather.nextUp[0].name} (${fmt(gather.nextUp[0].valuePerGather)} per gather).`);
     if (!steps.length) steps.push("No prices yet for your professions on this auction house. Try again after the next hourly update.");

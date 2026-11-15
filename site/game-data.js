@@ -72,8 +72,18 @@ window.GAME_DATA = {
     7069: { name: "Elemental Air" }, 7078: { name: "Essence of Fire" }, 7076: { name: "Essence of Earth" },
     7080: { name: "Essence of Water" }, 7082: { name: "Essence of Air" }, 12808: { name: "Essence of Undeath" },
     12803: { name: "Living Essence" },
-    10940: { name: "Strange Dust" }, 11176: { name: "Dream Dust" }, 16204: { name: "Illusion Dust" },
-    10938: { name: "Lesser Magic Essence" }, 14344: { name: "Large Brilliant Shard" },
+    // Disenchanting results
+    10940: { name: "Strange Dust" }, 11083: { name: "Soul Dust" }, 11137: { name: "Vision Dust" },
+    11176: { name: "Dream Dust" }, 16204: { name: "Illusion Dust" },
+    10938: { name: "Lesser Magic Essence" }, 10939: { name: "Greater Magic Essence" },
+    10998: { name: "Lesser Astral Essence" }, 11082: { name: "Greater Astral Essence" },
+    11134: { name: "Lesser Mystic Essence" }, 11135: { name: "Greater Mystic Essence" },
+    11174: { name: "Lesser Nether Essence" }, 11175: { name: "Greater Nether Essence" },
+    16202: { name: "Lesser Eternal Essence" }, 16203: { name: "Greater Eternal Essence" },
+    10978: { name: "Small Glimmering Shard" }, 11084: { name: "Large Glimmering Shard" },
+    11138: { name: "Small Glowing Shard" }, 11139: { name: "Large Glowing Shard" },
+    11177: { name: "Small Radiant Shard" }, 11178: { name: "Large Radiant Shard" },
+    14343: { name: "Small Brilliant Shard" }, 14344: { name: "Large Brilliant Shard" }, 20725: { name: "Nexus Crystal" },
     // Fish & food
     6358: { name: "Oily Blackmouth" }, 13422: { name: "Stonescale Eel" }, 13758: { name: "Raw Redgill" },
     13759: { name: "Raw Nightfin Snapper" }, 13755: { name: "Winter Squid" }, 21071: { name: "Raw Sagefish" },
@@ -232,8 +242,41 @@ window.GAME_DATA = {
    */
   conversions: [
     { name: "Fish in a Bucket (repeatable)", npc: "Jinar'Zillen, Shadowprey Village (Desolace)", faction: "Horde",
-      inputs: [[13545, 5]], outputs: [[13546, 1]], verify: true }
+      inputs: [[13545, 5]], outputs: [[13546, 1]], verify: true },
+    { name: "Combine 3 Lesser Magic Essence", npc: "Right-click in your bags (anyone)", inputs: [[10938, 3]], outputs: [[10939, 1]], verify: true },
+    { name: "Split Greater Magic Essence", npc: "Right-click in your bags (anyone)", inputs: [[10939, 1]], outputs: [[10938, 3]], verify: true },
+    { name: "Combine 3 Lesser Astral Essence", npc: "Right-click in your bags (anyone)", inputs: [[10998, 3]], outputs: [[11082, 1]], verify: true },
+    { name: "Split Greater Astral Essence", npc: "Right-click in your bags (anyone)", inputs: [[11082, 1]], outputs: [[10998, 3]], verify: true },
+    { name: "Combine 3 Lesser Mystic Essence", npc: "Right-click in your bags (anyone)", inputs: [[11134, 3]], outputs: [[11135, 1]], verify: true },
+    { name: "Split Greater Mystic Essence", npc: "Right-click in your bags (anyone)", inputs: [[11135, 1]], outputs: [[11134, 3]], verify: true },
+    { name: "Combine 3 Lesser Nether Essence", npc: "Right-click in your bags (anyone)", inputs: [[11174, 3]], outputs: [[11175, 1]], verify: true },
+    { name: "Split Greater Nether Essence", npc: "Right-click in your bags (anyone)", inputs: [[11175, 1]], outputs: [[11174, 3]], verify: true },
+    { name: "Combine 3 Lesser Eternal Essence", npc: "Right-click in your bags (anyone)", inputs: [[16202, 3]], outputs: [[16203, 1]], verify: true },
+    { name: "Split Greater Eternal Essence", npc: "Right-click in your bags (anyone)", inputs: [[16203, 1]], outputs: [[16202, 3]], verify: true },
   ],
+
+  /*
+   * Disenchanting (vanilla rules; marked verify for Forever). Each bracket covers item levels up to
+   * `maxIlvl` and needs Enchanting `skill`. Greens give dust/essence/shard at the armor or weapon odds
+   * below (avg quantities); blues give a shard (plus a small Nexus chance at the top); purples give Nexus.
+   */
+  disenchant: {
+    verify: true,
+    odds: { armor: { dust: 0.75, essence: 0.20, shard: 0.05 }, weapon: { dust: 0.20, essence: 0.75, shard: 0.05 } },
+    brackets: [
+      { maxIlvl: 15, skill: 1,   dust: [10940, 1.5], essence: [10938, 1.5], shard: null,  rare: [[10978, 1]] },
+      { maxIlvl: 20, skill: 1,   dust: [10940, 2.5], essence: [10939, 1.5], shard: 10978, rare: [[10978, 1]] },
+      { maxIlvl: 25, skill: 25,  dust: [10940, 5],   essence: [10998, 1.5], shard: 10978, rare: [[10978, 1]] },
+      { maxIlvl: 30, skill: 50,  dust: [11083, 1.5], essence: [11082, 1.5], shard: 11084, rare: [[11084, 1]] },
+      { maxIlvl: 35, skill: 75,  dust: [11083, 3.5], essence: [11134, 1.5], shard: 11138, rare: [[11138, 1]] },
+      { maxIlvl: 40, skill: 100, dust: [11137, 1.5], essence: [11135, 1.5], shard: 11139, rare: [[11139, 1]] },
+      { maxIlvl: 45, skill: 125, dust: [11137, 3.5], essence: [11174, 1.5], shard: 11177, rare: [[11177, 1]] },
+      { maxIlvl: 50, skill: 150, dust: [11176, 1.5], essence: [11175, 1.5], shard: 11178, rare: [[11178, 1]] },
+      { maxIlvl: 55, skill: 175, dust: [11176, 3.5], essence: [16202, 1.5], shard: 14343, rare: [[14343, 1]] },
+      { maxIlvl: 60, skill: 200, dust: [16204, 1.5], essence: [16203, 1.5], shard: 14344, rare: [[14344, 0.995], [20725, 0.005]], epic: [[20725, 1]] },
+      { maxIlvl: 65, skill: 225, dust: [16204, 3.5], essence: [16203, 2.5], shard: 14344, rare: [[14344, 0.995], [20725, 0.005]], epic: [[20725, 1.5]] }
+    ]
+  },
 
   /*
    * Recipes. skill = skill to learn/craft. makes = [itemId, qtyProduced]. reagents = [[itemId, qty], ...].

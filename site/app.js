@@ -4,7 +4,7 @@
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const STORE = "forever-goldmaker:v1";
 
-  let base = "data/", houses = [], names = {}, priceCache = {}, lastResult = null;
+  let base = "data/", houses = [], names = {}, itemInfo = {}, priceCache = {}, lastResult = null;
 
   // ---------- data loading ----------
   async function getJSON(url) {
@@ -19,6 +19,7 @@
     catch { base = "demo/"; idx = await getJSON(base + "houses.json"); $("demoBanner").hidden = false; }
     houses = idx.houses.filter(h => h.listings > 0);
     try { names = await getJSON(base + "item-names.json"); } catch { names = {}; }
+    try { itemInfo = await getJSON(base + "item-info.json"); } catch { itemInfo = {}; }
     renderHouseOptions();
     setFreshness(idx.updated);
   }
@@ -141,7 +142,7 @@
     const house = houses.find(h => h.id === s.house);
     const faction = s.faction || (house && house.faction !== "Blackwater" ? house.faction : null);
     const res = E.recommend(D, {
-      professions: s.professions, charLevel: s.charLevel, faction, budget: s.gold * 10000, prices: p, names
+      professions: s.professions, charLevel: s.charLevel, faction, budget: s.gold * 10000, prices: p, names, itemInfo
     });
     lastResult = res;
     $("plan").innerHTML = res.plan.map(x => `<li>${esc(x)}</li>`).join("");
@@ -149,10 +150,12 @@
     renderGather(res.gather, s);
     renderFarms(res.farms, faction);
     renderFlips(res.flips);
+    renderDisenchant(res.disenchant, res.crafts, s);
     $("nCraft").textContent = res.crafts.length;
     $("nGather").textContent = res.gather.unlocked.length;
     $("nFarms").textContent = res.farms.list.length + res.farms.arbitrage.length;
     $("nFlips").textContent = res.flips.length;
+    $("nDe").textContent = res.disenchant.length + res.crafts.filter(c => c.outlet === "disenchant").length;
   }
 
   const links = arr => `<span class="links">${arr.map(l => `<a href="${l.url}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join("")}</span>`;
@@ -169,7 +172,7 @@
       list.map(c => `<tr>
         <td><span class="name">${esc(c.name)}${c.makesQty > 1 ? ` ×${c.makesQty}` : ""}</span>
           <span class="meta">${esc(D.professions[c.prof].name)} ${c.skill} · ${c.reagents.map(r => `${r.qty}× ${esc(r.name)}${r.source === "vendor" ? " (vendor)" : ""}`).join(", ")}</span>
-          ${c.gatherable.length ? `<span class="tag own">You can gather: ${esc(c.gatherable.join(", "))}</span>` : ""}${warnTags(c.warnings)}</td>
+          ${c.outlet === "disenchant" ? `<span class="tag own">Disenchant it (beats selling${c.sellRevenue != null ? ` at ${fmt(c.sellRevenue)}` : ""})</span>` : ""}${c.deHint ? `<span class="tag">${esc(c.deHint)}</span>` : ""}${c.gatherable.length ? `<span class="tag own">You can gather: ${esc(c.gatherable.join(", "))}</span>` : ""}${warnTags(c.warnings)}</td>
         <td class="num">${fmt(c.cost)}</td>
         <td class="num">${fmt(c.revenue)}<span class="meta">${c.listed.toLocaleString()} listed</span></td>
         <td class="num good">${fmt(c.profit)}<span class="meta">${Math.round(c.margin * 100)}%</span></td>
@@ -215,6 +218,34 @@
           <td class="num">${fmt(a.cost)}</td><td class="num">${fmt(a.revenue)}</td><td class="num good">${fmt(a.profit)}</td></tr>`).join(""));
     }
     html += `<p class="muted small">No profession needed. Each item is valued at its best outlet after fees: the AH, an NPC turn-in, or a vendor. Rare drops are counted at their odds, so a 1% chance at a 7g item adds 7s per attempt.${faction ? ` Showing ${esc(faction)} farms.` : " Pick your faction to hide farms you can't do."}</p>`;
+    el.innerHTML = html;
+  }
+
+  const QUALITY_NAME = { 2: "Green", 3: "Blue", 4: "Purple" };
+  function renderDisenchant(list, crafts, s) {
+    const el = $("tab-de");
+    const ench = s.professions.enchanting;
+    const deParts = parts => parts.map(p => `${+p.avg.toFixed(3)}× ${esc(p.name)} @ ${p.unit == null ? "no data" : fmt(p.unit)}`).join(" · ");
+    let html = ench == null
+      ? `<p class="muted small">You don't have Enchanting ticked. These still show so you can buy for an enchanter friend.</p>` : "";
+    if (list.length) {
+      html += `<h3 class="subhead" style="margin-top:0">Buy &amp; disenchant</h3>` + table(
+        `<th>Item</th><th class="num">Buy at</th><th class="num">Expected mats</th><th class="num">Profit each</th>`,
+        list.map(d => `<tr><td><span class="name">${esc(d.name)}</span>
+            <span class="meta">${QUALITY_NAME[d.quality]} · item level ${d.ilvl} · needs Enchanting ${d.skill} · ${d.listed} listed</span>
+            <span class="meta">${deParts(d.parts)}</span>
+            ${d.canDE ? "" : `<span class="tag warn">Needs Enchanting ${d.skill}</span>`}${d.affordable ? "" : `<span class="tag warn">Over your gold</span>`}
+            <span class="links"><a href="https://www.wowhead.com/forever/item=${d.itemId}" target="_blank" rel="noopener">Wowhead</a></span></td>
+          <td class="num">${fmt(d.buyAt)}</td><td class="num">${fmt(d.deValue)}</td>
+          <td class="num good">${fmt(d.profit)}<span class="meta">${Math.round(d.margin * 100)}%</span></td></tr>`).join(""));
+    } else html += `<p class="empty">No gear on this auction house is cheaper than its disenchant value right now. Item details fill in over the first few hourly updates.</p>`;
+    const craftDE = crafts.filter(c => c.outlet === "disenchant" || c.deHint);
+    if (craftDE.length) {
+      html += `<h3 class="subhead">Craft &amp; disenchant</h3>` + table(`<th>Make</th><th class="num">Mats cost</th><th class="num">Disenchant value</th><th class="num">Profit</th>`,
+        craftDE.map(c => `<tr><td><span class="name">${esc(c.name)}</span><span class="meta">${esc(D.professions[c.prof].name)} ${c.skill}${c.sellRevenue != null ? ` · sells for ${fmt(c.sellRevenue)}` : ""}</span>${c.deHint ? `<span class="tag warn">${esc(c.deHint)}</span>` : ""}</td>
+          <td class="num">${fmt(c.cost)}</td><td class="num">${fmt(c.deRevenue)}</td><td class="num good">${fmt(c.deRevenue - c.cost)}</td></tr>`).join(""));
+    }
+    html += `<p class="muted small">Expected value uses the classic disenchant odds (greens: mostly dust for armor, mostly essence for weapons, 5% shard; blues: a shard; purples: Nexus Crystals), with each mat at its best outlet after the AH cut. Gear prices are the cheapest listing of that item, so random-suffix versions ("of the Monkey") are grouped together. Odds are from the original game and not yet confirmed for Forever.</p>`;
     el.innerHTML = html;
   }
 
