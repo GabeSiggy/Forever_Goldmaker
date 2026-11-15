@@ -133,6 +133,9 @@ window.GAME_DATA = {
     13931: { name: "Nightfin Soup" }, 13928: { name: "Grilled Squid" }, 18254: { name: "Runn Tum Tuber Surprise" },
     21072: { name: "Smoked Sagefish" },
     // Raw-farm loot. `sell` = vendor sell price (copper); `noAH: true` = can't be listed (quest items).
+    12207: { name: "Giant Egg" }, 5117: { name: "Vibrant Plume" }, 4599: { name: "Cured Ham Steak" },
+    3712: { name: "Turtle Meat" }, 12203: { name: "Red Wolf Meat" }, 12208: { name: "Tender Wolf Meat" },
+    4479: { name: "Burning Charm" }, 4480: { name: "Thundering Charm" }, 4481: { name: "Cresting Charm" },
     6367: { name: "Big Iron Fishing Pole", sell: 2133 }, 13545: { name: "Shellfish", noAH: true },
     13546: { name: "Bloodbelly Fish" }, 7973: { name: "Big-mouth Clam" }, 7974: { name: "Zesty Clam Meat" },
     5500: { name: "Iridescent Pearl" }, 7971: { name: "Black Pearl" }, 13926: { name: "Golden Pearl" }
@@ -216,6 +219,17 @@ window.GAME_DATA = {
     { name: "Elemental Earth (earth elementals)", minLevel: 38, yields: [[7067, 0.3]], zones: ["Badlands", "Searing Gorge", "Desolace"] },
     { name: "Elemental Water (water elementals)", minLevel: 40, yields: [[7070, 0.3], [7080, 0.01]], zones: ["Dustwallow Marsh", "Azshara", "Felwood"] },
     { name: "Elemental Air (air elementals)", minLevel: 35, yields: [[7069, 0.3]], zones: ["Arathi Highlands", "Azshara", "Silithus"] },
+    // Launch-week farms (Nov 2026), drop rates from a priced write-up of streamer farm spots (conquestcapped.com).
+    // Giant Egg prices collapsed as listings jumped from ~240 to 1,300+, so live prices matter here.
+    { name: "Primitive / Savage Owlbeasts", minLevel: 44, yields: [[12207, 0.5], [4599, 0.07], [5117, 0.08]], zones: ["The Hinterlands"], verify: true },
+    { name: "Thundering Exiles", minLevel: 39, yields: [[4480, 0.39], [7069, 0.13]], zones: ["Arathi Highlands"], verify: true },
+    { name: "Cresting Exiles", minLevel: 39, yields: [[4481, 0.32], [7070, 0.10]], zones: ["Arathi Highlands"], verify: true },
+    { name: "Burning Exiles", minLevel: 39, yields: [[4479, 0.34], [7068, 0.11], [3857, 0.12]], zones: ["Arathi Highlands"], verify: true },
+    { name: "Rocs / Fire Rocs", minLevel: 43, yields: [[12207, 0.33], [5117, 0.05]], zones: ["Tanaris"], verify: true },
+    { name: "Steeljaw Snappers", minLevel: 43, yields: [[3712, 0.39], [7973, 0.32]], zones: ["Tanaris"], verify: true },
+    { name: "Mudrock Borers / Burrowers", minLevel: 41, yields: [[3712, 0.41], [7973, 0.33]], zones: ["Dustwallow Marsh"], verify: true },
+    { name: "Longtooth Howlers", minLevel: 42, yields: [[12208, 0.37], [12203, 0.46]], zones: ["Feralas"], verify: true },
+    { name: "Marsh Oracles / Flesheaters", minLevel: 43, yields: [[7973, 0.55]], zones: ["Swamp of Sorrows"], verify: true },
     { name: "Essence of Undeath / Living Essence", minLevel: 55, yields: [[12808, 0.1], [12803, 0.05]], zones: ["Eastern Plaguelands", "Western Plaguelands", "Un'Goro Crater"] }
   ],
 
