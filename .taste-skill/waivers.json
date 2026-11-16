@@ -1,0 +1,1 @@
+[{ "check": "copy-slop-word", "match": "realm", "reason": "WoW game term: a realm type (Normal, PvP, RP, RP-PvP) is what players call their ruleset; not filler copy." }]

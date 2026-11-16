@@ -24,6 +24,7 @@
     try { itemInfo = await getJSON(base + "item-info.json"); } catch { itemInfo = {}; }
     renderHouseOptions();
     setFreshness(idx.updated);
+    const hc = document.getElementById("houseCount"); if (hc) hc.textContent = houses.length;
   }
 
   // Friendly ruleset names per house group: shared labels from config.js, then this browser's own labels.
@@ -72,7 +73,7 @@
     const mins = Math.round((Date.now() - new Date(iso)) / 60000);
     const stale = mins > 120;
     const ago = mins < 60 ? `${mins} min ago` : `${Math.round(mins / 60)} h ago`;
-    $("freshness").innerHTML = `<span class="dot ${stale ? "stale" : ""}"></span>Prices updated ${ago}`;
+    $("freshness").innerHTML = `<span class="dot ${stale ? "stale" : ""}" aria-hidden="true"></span><span><span class="long">Prices </span>updated ${ago}</span>`;
   }
 
   // ---------- inputs ----------
@@ -157,7 +158,16 @@
     $("nGather").textContent = res.gather.unlocked.length;
     $("nFarms").textContent = res.farms.list.length + res.farms.arbitrage.length;
     $("nFlips").textContent = res.flips.length;
+    labelTables();
     $("nDe").textContent = res.disenchant.length + res.crafts.filter(c => c.outlet === "disenchant").length;
+  }
+
+  // On a phone each row becomes a card: give every cell its column name to show beside the figure.
+  function labelTables() {
+    document.querySelectorAll(".tab table").forEach(t => {
+      const heads = [...t.querySelectorAll("thead th")].map(th => th.textContent.trim());
+      t.querySelectorAll("tbody tr").forEach(tr => [...tr.children].forEach((td, i) => { if (i) td.dataset.label = heads[i] || ""; }));
+    });
   }
 
   const links = arr => `<span class="links">${arr.map(l => `<a href="${l.url}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join("")}</span>`;

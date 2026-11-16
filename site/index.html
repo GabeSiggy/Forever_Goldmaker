@@ -1,28 +1,36 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-radius="soft">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Forever Goldmaker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Forever Goldmaker: gold plans for WoW Forever players</title>
+  <meta name="description" content="What to craft, gather, farm, disenchant and flip on your WoW Forever auction house, ranked by hourly Blizzard prices.">
+  <meta name="theme-color" content="#0a0d14">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400..700&family=Chivo+Mono:wght@400..500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="top">
-    <div class="brand">
-      <span class="coin" aria-hidden="true"></span>
-      <div>
-        <h1>Forever Goldmaker</h1>
-        <p class="sub">What to craft, gather and flip on your WoW Forever auction house, using hourly Blizzard data.</p>
-      </div>
+  <header class="nav">
+    <div class="wrap">
+      <a class="skip-link" href="#top">Skip to content</a>
+      <span class="brand"><span class="mark mark--initial" aria-hidden="true">F</span>Forever Goldmaker</span>
+      <div id="freshness" class="freshness"></div>
     </div>
-    <div id="freshness" class="freshness"></div>
   </header>
 
+  <main id="top" class="wrap">
+  <section class="intro">
+    <h1>Gold plans for WoW Forever players. <span class="muted">Ranked by live auction prices.</span></h1>
+    <p class="fact">Every crafting, gathering, farming, disenchanting and flipping option your character has, priced from <strong id="houseCount">all</strong> auction houses each hour.</p>
+  </section>
+
   <div id="demoBanner" class="banner" hidden>
-    Showing <strong>demo prices</strong>. Live data appears once the hourly GitHub Action has run (see README).
+    Showing demo prices. Live data appears once the hourly GitHub Action has run (see the README).
   </div>
 
-  <main class="layout">
+  <div class="layout">
     <section class="panel inputs">
       <h2>Your character</h2>
 
@@ -38,7 +46,7 @@
         <div class="row">
           <select id="finderItem"></select>
           <input id="finderPrice" placeholder="e.g. 1g 20s" aria-label="Price you see in game">
-          <button id="finderGo" type="button" class="ghost">Match</button>
+          <button id="finderGo" type="button" class="ghost">Match my house</button>
         </div>
         <ol id="finderOut"></ol>
       </details>
@@ -64,7 +72,7 @@
       <div id="profs" class="profs"></div>
 
       <div class="actions">
-        <button id="go" type="button">Find gold</button>
+        <button id="go" type="button">Rank my options</button>
         <button id="share" type="button" class="ghost">Copy share link</button>
       </div>
       <p id="shareMsg" class="muted small"></p>
@@ -73,10 +81,10 @@
     <section class="results">
       <div class="panel plan">
         <h2>Your plan</h2>
-        <ol id="plan"><li class="muted">Pick your auction house and professions, then press <em>Find gold</em>.</li></ol>
+        <ol id="plan"><li class="muted">Pick your auction house and professions, then press Rank my options.</li></ol>
       </div>
 
-      <nav class="tabs" role="tablist">
+      <nav class="tabs" aria-label="Result type">
         <button data-tab="craft" class="active">Craft &amp; sell <span id="nCraft" class="pill"></span></button>
         <button data-tab="gather">Gather <span id="nGather" class="pill"></span></button>
         <button data-tab="farms">Raw farming <span id="nFarms" class="pill"></span></button>
@@ -89,11 +97,14 @@
       <div id="tab-de" class="panel tab" hidden></div>
       <div id="tab-flips" class="panel tab" hidden></div>
     </section>
+  </div>
   </main>
 
-  <footer class="foot muted small">
-    Prices: Blizzard Game Data API (WoW Forever, hourly). Recipes and farm zones: vanilla baseline, so items marked
-    <span class="warn-dot"></span> may differ in Forever. Not affiliated with Blizzard.
+  <footer class="foot">
+    <div class="wrap">
+      Prices from the Blizzard Game Data API, refreshed hourly. Recipes and farm zones start from the original game, so items with a
+      <span class="warn-dot" aria-hidden="true"></span> dashed tag may differ in Forever. Not affiliated with Blizzard.
+    </div>
   </footer>
 
   <script src="config.js"></script>
