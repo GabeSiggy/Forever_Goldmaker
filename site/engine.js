@@ -15,10 +15,10 @@
   const FLIP_DISCOUNT = 0.70;   // flip when cheapest listing <= 70% of 7-day average
   const FLIP_MIN_DAYS = 3;      // need this many days of history before trusting the average
 
-  function makeMarket(data, prices, names, itemInfo) {
+  function makeMarket(data, prices, names, itemInfo, extraNoDE) {
     const items = prices.items || {};
     const avg7 = prices.avg7 || {};
-    const nameOf = id => (data.items[id] && data.items[id].name) || (names && names[id]) || `Item #${id}`;
+    const nameOf = id => (data.items[id] && data.items[id].name) || (names && names[id]) || (itemInfo && itemInfo[id] && itemInfo[id][0]) || `Item #${id}`;
 
     // What it costs to get one unit: NPC vendor if sold there, otherwise AH market price.
     function buyCost(id) {
@@ -66,10 +66,18 @@
       return a ? { q: a[1], ilvl: a[2], cls: a[3], equip: a[4] } : null;
     }
 
+    const noDEPattern = data.disenchant && data.disenchant.noDEPattern ? new RegExp(data.disenchant.noDEPattern, "i") : null;
+    const noDESet = new Set([...((data.disenchant && data.disenchant.noDE) || []), ...(extraNoDE || [])].map(Number));
+    function isNoDE(id) {
+      if (noDESet.has(Number(id)) || (data.items[id] && data.items[id].noDE)) return true;
+      return !!(noDEPattern && noDEPattern.test(nameOf(id)));
+    }
+
     // Expected value of disenchanting one item, after the AH cut on the mats. null = can't be disenchanted / unknown.
     function deValue(id, faction) {
       const de = data.disenchant, inf = infoOf(id);
       if (!de || !inf || !inf.equip || inf.q < 2 || inf.q > 4 || inf.ilvl == null || (inf.cls !== 2 && inf.cls !== 4)) return null;
+      if (isNoDE(id)) return null;
       const b = de.brackets.find(x => inf.ilvl <= x.maxIlvl);
       if (!b) return null;
       let outcomes;
@@ -78,7 +86,7 @@
         outcomes = [[b.dust[0], (o.dust + (b.shard ? 0 : o.shard)) * b.dust[1]], [b.essence[0], o.essence * b.essence[1]]];
         if (b.shard) outcomes.push([b.shard, o.shard]);
       } else if (inf.q === 3) outcomes = b.rare;
-      else outcomes = b.epic;
+      else outcomes = b.epic || b.rare; // low-level epics give a shard
       if (!outcomes) return null;
       let value = 0, priced = 0;
       const parts = outcomes.map(([mid, avg]) => {
@@ -146,7 +154,7 @@
         needGold: batch === 0 ? cost : 0,
         reagents, gatherable, outlet, de, sellRevenue, deRevenue,
         deHint: de && !canDE && deRevenue > (sellRevenue || 0) && deRevenue > cost
-          ? `Worth ${fmt(deRevenue)} disenchanted (needs Enchanting ${de.skill})` : null,
+          ? `Worth ${fmt(deRevenue)} disenchanted (needs an enchanter)` : null,
         warnings: [r.cooldown, r.requires, r.note, r.verify ? "Recipe not yet verified for Forever" : null].filter(Boolean)
       });
     }
@@ -273,7 +281,7 @@
 
   /** Top-level: everything the UI shows, plus a one-paragraph plan. */
   function recommend(data, input) {
-    const m = makeMarket(data, input.prices, input.names, input.itemInfo);
+    const m = makeMarket(data, input.prices, input.names, input.itemInfo, input.noDE);
     const crafts = craftSuggestions(data, input, m);
     const gather = gatherSuggestions(data, input, m);
     const farms = farmSuggestions(data, input, m);

@@ -270,25 +270,29 @@ window.GAME_DATA = {
   ],
 
   /*
-   * Disenchanting (vanilla rules; marked verify for Forever). Each bracket covers item levels up to
-   * `maxIlvl` and needs Enchanting `skill`. Greens give dust/essence/shard at the armor or weapon odds
+   * Disenchanting. Each bracket covers item levels up to `maxIlvl`. In Forever any Enchanting skill can
+   * disenchant anything (wow-professions.com Forever guide), so every bracket's `skill` is 1. Greens give dust/essence/shard at the armor or weapon odds
    * below (avg quantities); blues give a shard (plus a small Nexus chance at the top); purples give Nexus.
    */
   disenchant: {
     verify: true,
+    // Items that look disenchantable (green+ gear) but aren't. Blizzard's API has no flag for this,
+    // so list ids here, or names matching `noDEPattern`. Enchanter-made wands are green in Forever.
+    noDE: [11287, 11288, 11289, 11290],
+    noDEPattern: "^(Lesser|Greater) (Magic|Mystic|Eternal) Wand$|Practice Wand|Twisted Nether Wand|Dreambough Wand|Brilliant Wand",
     odds: { armor: { dust: 0.75, essence: 0.20, shard: 0.05 }, weapon: { dust: 0.20, essence: 0.75, shard: 0.05 } },
     brackets: [
       { maxIlvl: 15, skill: 1,   dust: [10940, 1.5], essence: [10938, 1.5], shard: null,  rare: [[10978, 1]] },
       { maxIlvl: 20, skill: 1,   dust: [10940, 2.5], essence: [10939, 1.5], shard: 10978, rare: [[10978, 1]] },
-      { maxIlvl: 25, skill: 25,  dust: [10940, 5],   essence: [10998, 1.5], shard: 10978, rare: [[10978, 1]] },
-      { maxIlvl: 30, skill: 50,  dust: [11083, 1.5], essence: [11082, 1.5], shard: 11084, rare: [[11084, 1]] },
-      { maxIlvl: 35, skill: 75,  dust: [11083, 3.5], essence: [11134, 1.5], shard: 11138, rare: [[11138, 1]] },
-      { maxIlvl: 40, skill: 100, dust: [11137, 1.5], essence: [11135, 1.5], shard: 11139, rare: [[11139, 1]] },
-      { maxIlvl: 45, skill: 125, dust: [11137, 3.5], essence: [11174, 1.5], shard: 11177, rare: [[11177, 1]] },
-      { maxIlvl: 50, skill: 150, dust: [11176, 1.5], essence: [11175, 1.5], shard: 11178, rare: [[11178, 1]] },
-      { maxIlvl: 55, skill: 175, dust: [11176, 3.5], essence: [16202, 1.5], shard: 14343, rare: [[14343, 1]] },
-      { maxIlvl: 60, skill: 200, dust: [16204, 1.5], essence: [16203, 1.5], shard: 14344, rare: [[14344, 0.995], [20725, 0.005]], epic: [[20725, 1]] },
-      { maxIlvl: 65, skill: 225, dust: [16204, 3.5], essence: [16203, 2.5], shard: 14344, rare: [[14344, 0.995], [20725, 0.005]], epic: [[20725, 1.5]] }
+      { maxIlvl: 25, skill: 1,  dust: [10940, 5],   essence: [10998, 1.5], shard: 10978, rare: [[10978, 1]] },
+      { maxIlvl: 30, skill: 1,  dust: [11083, 1.5], essence: [11082, 1.5], shard: 11084, rare: [[11084, 1]] },
+      { maxIlvl: 35, skill: 1,  dust: [11083, 3.5], essence: [11134, 1.5], shard: 11138, rare: [[11138, 1]] },
+      { maxIlvl: 40, skill: 1, dust: [11137, 1.5], essence: [11135, 1.5], shard: 11139, rare: [[11139, 1]] },
+      { maxIlvl: 45, skill: 1, dust: [11137, 3.5], essence: [11174, 1.5], shard: 11177, rare: [[11177, 1]] },
+      { maxIlvl: 50, skill: 1, dust: [11176, 1.5], essence: [11175, 1.5], shard: 11178, rare: [[11178, 1]] },
+      { maxIlvl: 55, skill: 1, dust: [11176, 3.5], essence: [16202, 1.5], shard: 14343, rare: [[14343, 1]] },
+      { maxIlvl: 60, skill: 1, dust: [16204, 1.5], essence: [16203, 1.5], shard: 14344, rare: [[14344, 0.995], [20725, 0.005]], epic: [[20725, 1]] },
+      { maxIlvl: 65, skill: 1, dust: [16204, 3.5], essence: [16203, 2.5], shard: 14344, rare: [[14344, 0.995], [20725, 0.005]], epic: [[20725, 1.5]] }
     ]
   },
 

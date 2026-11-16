@@ -57,5 +57,14 @@ assert(c4.length === 0); // no AH price and no enchanting -> nothing to sell int
 // Essence combine arbitrage shows up when the gap exists
 const essArb = ench.farms.arbitrage.filter(a => /Essence/.test(a.name)).map(a => `${a.name} +${E.fmt(a.profit)}`);
 console.log("essence arb:", essArb);
+// Not-disenchantable items: enchanter wands (by id and by name) and user-flagged items
+const wandPrices = { items: { ...prices.items, 11288: [100, 120, 50, 10], 55555: [100, 120, 50, 10], 30001: [100, 120, 5, 2] }, avg7: prices.avg7 };
+const wandInfo = { ...itemInfo, 11288: ["Greater Magic Wand", 2, 13, 2, 1], 55555: ["Brilliant Wand", 2, 60, 2, 1], 30001: ["Cheap Green", 2, 58, 4, 1] };
+const mw = E.makeMarket(D, wandPrices, {}, wandInfo);
+assert(mw.deValue(11288) === null && mw.deValue(55555) === null && mw.deValue(30001) !== null);
+assert(mw.deValue(30001).skill === 1);
+const flagged = E.recommend(D, { professions: { enchanting: 1 }, charLevel: 60, budget: 1e7, prices: wandPrices, names: {}, itemInfo: wandInfo, noDE: [30001] });
+assert(!flagged.disenchant.some(d => d.itemId === 30001 || d.itemId === 11288));
+console.log("noDE OK; enchanting 1 can DE ilvl 58:", E.recommend(D, { professions: { enchanting: 1 }, charLevel: 60, budget: 1e7, prices: wandPrices, names: {}, itemInfo: wandInfo }).disenchant.some(d => d.itemId === 30001 && d.canDE));
 console.log("fmt:", E.fmt(1234567), E.fmt(950), E.fmt(-20050));
 console.log("ALL OK");

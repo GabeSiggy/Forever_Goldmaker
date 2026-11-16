@@ -3,6 +3,8 @@
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const STORE = "forever-goldmaker:v1";
+  const NODE_STORE = "forever-goldmaker:noDE";
+  const loadNoDE = () => { try { return JSON.parse(localStorage.getItem(NODE_STORE)) || []; } catch { return []; } };
 
   let base = "data/", houses = [], names = {}, itemInfo = {}, priceCache = {}, lastResult = null;
 
@@ -142,7 +144,7 @@
     const house = houses.find(h => h.id === s.house);
     const faction = s.faction || (house && house.faction !== "Blackwater" ? house.faction : null);
     const res = E.recommend(D, {
-      professions: s.professions, charLevel: s.charLevel, faction, budget: s.gold * 10000, prices: p, names, itemInfo
+      professions: s.professions, charLevel: s.charLevel, faction, budget: s.gold * 10000, prices: p, names, itemInfo, noDE: loadNoDE()
     });
     lastResult = res;
     $("plan").innerHTML = res.plan.map(x => `<li>${esc(x)}</li>`).join("");
@@ -219,6 +221,14 @@
     }
     html += `<p class="muted small">No profession needed. Each item is valued at its best outlet after fees: the AH, an NPC turn-in, or a vendor. Rare drops are counted at their odds, so a 1% chance at a 7g item adds 7s per attempt.${faction ? ` Showing ${esc(faction)} farms.` : " Pick your faction to hide farms you can't do."}</p>`;
     el.innerHTML = html;
+    el.querySelectorAll("[data-node]").forEach(a => a.addEventListener("click", e => {
+      e.preventDefault();
+      const list = loadNoDE(); list.push(+a.dataset.node);
+      try { localStorage.setItem(NODE_STORE, JSON.stringify([...new Set(list)])); } catch {}
+      run();
+    }));
+    const reset = el.querySelector("#resetNoDE");
+    if (reset) reset.addEventListener("click", e => { e.preventDefault(); try { localStorage.removeItem(NODE_STORE); } catch {} run(); });
   }
 
   const QUALITY_NAME = { 2: "Green", 3: "Blue", 4: "Purple" };
@@ -232,10 +242,11 @@
       html += `<h3 class="subhead" style="margin-top:0">Buy &amp; disenchant</h3>` + table(
         `<th>Item</th><th class="num">Buy at</th><th class="num">Expected mats</th><th class="num">Profit each</th>`,
         list.map(d => `<tr><td><span class="name">${esc(d.name)}</span>
-            <span class="meta">${QUALITY_NAME[d.quality]} · item level ${d.ilvl} · needs Enchanting ${d.skill} · ${d.listed} listed</span>
+            <span class="meta">${QUALITY_NAME[d.quality]} · item level ${d.ilvl} · ${d.listed} listed</span>
             <span class="meta">${deParts(d.parts)}</span>
-            ${d.canDE ? "" : `<span class="tag warn">Needs Enchanting ${d.skill}</span>`}${d.affordable ? "" : `<span class="tag warn">Over your gold</span>`}
-            <span class="links"><a href="https://www.wowhead.com/forever/item=${d.itemId}" target="_blank" rel="noopener">Wowhead</a></span></td>
+            ${d.affordable ? "" : `<span class="tag warn">Over your gold</span>`}
+            <span class="links"><a href="https://www.wowhead.com/forever/item=${d.itemId}" target="_blank" rel="noopener">Wowhead</a>
+            <a href="#" data-node="${d.itemId}" title="Hide this item if the game won't let you disenchant it">Can't disenchant?</a></span></td>
           <td class="num">${fmt(d.buyAt)}</td><td class="num">${fmt(d.deValue)}</td>
           <td class="num good">${fmt(d.profit)}<span class="meta">${Math.round(d.margin * 100)}%</span></td></tr>`).join(""));
     } else html += `<p class="empty">No gear on this auction house is cheaper than its disenchant value right now. Item details fill in over the first few hourly updates.</p>`;
@@ -245,8 +256,18 @@
         craftDE.map(c => `<tr><td><span class="name">${esc(c.name)}</span><span class="meta">${esc(D.professions[c.prof].name)} ${c.skill}${c.sellRevenue != null ? ` · sells for ${fmt(c.sellRevenue)}` : ""}</span>${c.deHint ? `<span class="tag warn">${esc(c.deHint)}</span>` : ""}</td>
           <td class="num">${fmt(c.cost)}</td><td class="num">${fmt(c.deRevenue)}</td><td class="num good">${fmt(c.deRevenue - c.cost)}</td></tr>`).join(""));
     }
-    html += `<p class="muted small">Expected value uses the classic disenchant odds (greens: mostly dust for armor, mostly essence for weapons, 5% shard; blues: a shard; purples: Nexus Crystals), with each mat at its best outlet after the AH cut. Gear prices are the cheapest listing of that item, so random-suffix versions ("of the Monkey") are grouped together. Odds are from the original game and not yet confirmed for Forever.</p>`;
+    const hidden = loadNoDE();
+    if (hidden.length) html += `<p class="muted small">${hidden.length} item(s) marked as not disenchantable in this browser. <a href="#" id="resetNoDE">Show them again</a></p>`;
+    html += `<p class="muted small">Any Enchanting skill can disenchant anything in Forever. Expected value uses the classic disenchant odds (greens: mostly dust for armor, mostly essence for weapons, 5% shard; blues: a shard; purples: Nexus Crystals), with each mat at its best outlet after the AH cut. Gear prices are the cheapest listing of that item, so random-suffix versions ("of the Monkey") are grouped together. Odds are from the original game and not yet confirmed for Forever.</p>`;
     el.innerHTML = html;
+    el.querySelectorAll("[data-node]").forEach(a => a.addEventListener("click", e => {
+      e.preventDefault();
+      const list = loadNoDE(); list.push(+a.dataset.node);
+      try { localStorage.setItem(NODE_STORE, JSON.stringify([...new Set(list)])); } catch {}
+      run();
+    }));
+    const reset = el.querySelector("#resetNoDE");
+    if (reset) reset.addEventListener("click", e => { e.preventDefault(); try { localStorage.removeItem(NODE_STORE); } catch {} run(); });
   }
 
   function renderFlips(list) {
